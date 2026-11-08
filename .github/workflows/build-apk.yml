@@ -1,7 +1,9 @@
-# GitHub Actions workflow for Mika 0.1.38 + Liquid Glass (debug APK)
+# GitHub Actions workflow for Mika 0.1.38 + Liquid Glass (debug APK) — v2 fix
+# v2: align the Android setup with upstream Mika's own CI app job
+# (setup-android@v4 with explicit android-36 packages). The v1 file's
+# setup-android@v3 step failed in the first Actions run (2026-11-08,
+# run 42455210045, failed at "Set up Android SDK" before compiling).
 # Place this file at: .github/workflows/build-apk.yml
-# in a repo containing the delivered 0.1.38 Liquid Glass source
-# (the Drive zip "Mika-LiquidGlass-0.1.38-源码.zip", 52468798 bytes).
 # Trigger it manually from the repo's Actions tab; no code changes needed.
 name: Build Liquid Glass APK
 
@@ -11,27 +13,30 @@ on:
 jobs:
   build:
     runs-on: ubuntu-latest
+    timeout-minutes: 40
     steps:
       - name: Check out source
-        uses: actions/checkout@v4
+        uses: actions/checkout@v7
 
       - name: Set up JDK 17
-        uses: actions/setup-java@v4
+        uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: "17"
 
       - name: Set up Android SDK
-        uses: android-actions/setup-android@v3
+        uses: android-actions/setup-android@v4
+        with:
+          packages: "platform-tools platforms;android-36 build-tools;35.0.0"
 
       - name: Make gradlew executable
         run: chmod +x gradlew
 
       - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon
+        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
 
       - name: Upload APK
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: mika-liquid-glass-0.1.38-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
