@@ -553,7 +553,7 @@ class AgentLoop(
                     old.copy(
                         thinking = thought.ifEmpty { old.thinking },
                         output = text.ifEmpty { old.output },
-                        tool = tool?.let { tools.verb(it) } ?: old.tool,
+                        tool = tool ?: old.tool,
                         live = false,
                     )
                 }
@@ -1051,7 +1051,7 @@ class AgentLoop(
                     old.copy(
                         thinking = thought.ifEmpty { old.thinking },
                         output = text.ifEmpty { old.output },
-                        tool = call?.let { tools.verb(it.name) } ?: old.tool,
+                        tool = call?.name ?: old.tool,
                         live = false,
                     )
                 }

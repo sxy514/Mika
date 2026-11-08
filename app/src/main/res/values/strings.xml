@@ -122,7 +122,7 @@
     <string name="live_title">Thinking &amp; output</string>
     <string name="live_running">Running</string>
     <string name="live_last">Most recent run</string>
-    <string name="live_empty">Nothing here yet. When a task runs, the model's thinking and output appear here step by step.</string>
+    <string name="live_empty">Nothing here yet. When a task is running, its thinking and output appear here step by step.</string>
     <string name="live_step">Step %1$d</string>
     <string name="live_thinking">Thinking</string>
     <string name="live_output">Output</string>
