@@ -37,6 +37,7 @@ object SpeechOptions {
                 tr(R.string.speech_bailian_provider) + " · " + tr(if (choice.region == BailianRegion.Singapore) R.string.speech_bailian_singapore else R.string.speech_bailian_beijing),
                 false,
             )
+            is SpeechChoice.SenseVoice -> Summary(tr(R.string.speech_sensevoice_model), tr(R.string.speech_sensevoice_note), true)
             SpeechChoice.Auto -> when {
                 system.usable -> systemSummary(system)
                 system.available -> silent

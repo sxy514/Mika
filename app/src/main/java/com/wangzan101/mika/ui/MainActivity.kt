@@ -70,6 +70,7 @@ import com.wangzan101.mika.ui.theme.MikaTheme
 import com.wangzan101.mika.ui.theme.animationsOff
 import com.wangzan101.mika.ui.theme.appearanceDark
 import com.wangzan101.mika.ui.theme.systemBarsFor
+import com.wangzan101.mika.ui.theme.windowBackgroundForAppearance
 
 class MainActivity : ComponentActivity() {
     private lateinit var monitor: SystemStatusMonitor
@@ -93,6 +94,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        // 窗口底色先按设置里的外观对上,免得第一帧按系统深浅闪一下
+        windowBackgroundForAppearance()
         requestedConversation = intent.getStringExtra(EXTRA_OPEN_CONVERSATION)
         takeTeach(intent)
         val pendingShare = (application as MikaApp).sharedDrafts.read()

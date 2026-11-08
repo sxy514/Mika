@@ -1,4 +1,4 @@
-# GitHub Actions workflow for Mika 0.1.38 + Liquid Glass (debug APK) — v2 fix
+# GitHub Actions workflow for Mika 0.1.39 (Liquid Glass + SenseVoice, fixed signing) — v3
 # v2: align the Android setup with upstream Mika's own CI app job
 # (setup-android@v4 with explicit android-36 packages). The v1 file's
 # setup-android@v3 step failed in the first Actions run (2026-11-08,
@@ -38,6 +38,6 @@ jobs:
       - name: Upload APK
         uses: actions/upload-artifact@v7
         with:
-          name: mika-liquid-glass-0.1.38-debug-apk
+          name: mika-0.1.39-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
           if-no-files-found: error

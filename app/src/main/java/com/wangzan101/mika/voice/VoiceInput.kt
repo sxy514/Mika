@@ -55,6 +55,10 @@ class VoiceInput(
                     LiveAsrTransport().connect(spec.region.endpoint(spec.workspace), mapOf("Authorization" to "Bearer $key"))
                 })
             }
+            is SpeechEngineSpec.SenseVoice -> {
+                if (!SenseVoiceModel.isReady(context)) return FailedSession(SpeechFailure.Unavailable(SpeechEngineSpec.Why.SenseVoiceModelMissing))
+                SenseVoiceSpeech(PcmRecorder(streaming = true), context)
+            }
             is SpeechEngineSpec.System -> SystemSpeechSession(
                 context, spec.onDevice, tag,
                 onNoResponse = settings::noteSystemSilent, onAnswered = settings::noteSystemAnswered,

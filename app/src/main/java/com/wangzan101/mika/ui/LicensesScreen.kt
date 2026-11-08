@@ -70,6 +70,8 @@ object Licenses {
         Entry("XZ for Java", "0BSD", "版本 1.10,首次启动时解压自带的运行环境。https://tukaani.org/xz/java.html"),
         Entry("ZXing", "Apache-2.0", "版本 3.5.3,在本机生成微信绑定二维码。https://github.com/zxing/zxing"),
         Entry("commonmark-java", "BSD-2-Clause", "版本 0.30.1(含表格、删除线扩展),把回答里的 Markdown 解析成结构后显示。Copyright (c) 2015, Atlassian Pty Ltd. https://github.com/commonmark/commonmark-java"),
+        Entry("sherpa-onnx", "Apache-2.0", "版本 2.0.1(只保留 arm64 库),在本机跑 SenseVoice 离线语音识别;识别模型由用户单独下载,不随安装包。https://github.com/k2-fsa/sherpa-onnx"),
+        Entry("ONNX Runtime", "MIT", "版本随 sherpa-onnx 2.0.1 附带(libonnxruntime),在本机执行语音识别模型。Copyright (c) Microsoft Corporation. https://github.com/microsoft/onnxruntime"),
     )
 }
 

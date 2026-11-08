@@ -244,3 +244,17 @@ CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY,
 OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE
 OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 ```
+
+## sherpa-onnx
+
+- Project: https://github.com/k2-fsa/sherpa-onnx
+- Artifact: 本地 AAR 文件 `app/libs/sherpa-onnx-2.0.1-arm64.aar`(取自官方 2.0.1 发布包,只保留 arm64-v8a 的原生库)
+- License: Apache-2.0
+- Usage: 以库的形式依赖,未修改其代码;在本机运行 SenseVoice 离线语音识别。识别模型文件不随安装包,由用户在应用内单独下载。
+
+## ONNX Runtime
+
+- Project: https://github.com/microsoft/onnxruntime
+- Artifact: `libonnxruntime.so`(随 sherpa-onnx 2.0.1 的 AAR 一同分发)
+- License: MIT
+- Usage: sherpa-onnx 的推理后端,在本机执行语音识别模型。Copyright (c) Microsoft Corporation.

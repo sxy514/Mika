@@ -16,6 +16,7 @@ import androidx.activity.enableEdgeToEdge
 import com.wangzan101.mika.ui.theme.MikaTheme
 import com.wangzan101.mika.ui.theme.animationsOff
 import com.wangzan101.mika.ui.theme.systemBarsFor
+import com.wangzan101.mika.ui.theme.windowBackgroundForAppearance
 
 /**
  * App 里的文件查看页:网页、Markdown、PDF、图片和文本类文件在这里直接看,不用另找 App。
@@ -30,6 +31,7 @@ class FileViewerActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         enableEdgeToEdge()
         super.onCreate(savedInstanceState)
+        windowBackgroundForAppearance()
         val uri = intent.data
         if (uri == null) { finish(); return }
         val name = intent.getStringExtra(EXTRA_NAME) ?: uri.lastPathSegment.orEmpty()

@@ -87,6 +87,17 @@
     <string name="speech_bailian_other_model">Other</string>
     <string name="speech_bailian_privacy">Saving connects once to check the key, without sending audio. While you hold to talk, audio goes to Alibaba Cloud and is billed by duration. The key is encrypted on this phone.</string>
     <string name="speech_bailian_missing">Set the Bailian API key in Settings › Model › Speech to text.</string>
+    <string name="speech_sensevoice_group">On-device</string>
+    <string name="speech_sensevoice_model">SenseVoice (offline)</string>
+    <string name="speech_sensevoice_note">Alibaba SenseVoice · fully on-device, with punctuation</string>
+    <string name="speech_sensevoice_missing_note">Model not downloaded yet (about 227 MB)</string>
+    <string name="speech_sensevoice_ready">Downloaded</string>
+    <string name="speech_sensevoice_not_downloaded">Not downloaded</string>
+    <string name="speech_sensevoice_downloading">Downloading %1$d%%</string>
+    <string name="speech_sensevoice_download">Download model</string>
+    <string name="speech_sensevoice_delete">Delete model</string>
+    <string name="speech_sensevoice_failed">Model download failed. Check the network and try again.</string>
+    <string name="speech_sensevoice_missing">The SenseVoice model is not downloaded yet. Download it in Settings › Model › Speech to text.</string>
     <string name="speech_bailian_remove">Remove saved API key</string>
     <string name="speech_live_save">Connect and use</string>
     <string name="speech_live_testing">Connecting…</string>

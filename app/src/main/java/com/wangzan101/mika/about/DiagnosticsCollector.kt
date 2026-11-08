@@ -29,6 +29,7 @@ import com.wangzan101.mika.record.RunStore
 import com.wangzan101.mika.settings.AccessibilityState
 import com.wangzan101.mika.settings.SystemStatus
 import com.wangzan101.mika.task.TaskService
+import com.wangzan101.mika.voice.SenseVoiceModel
 import com.wangzan101.mika.voice.SpeechChoice
 import com.wangzan101.mika.voice.SystemSpeech
 
@@ -173,6 +174,7 @@ object DiagnosticsCollector {
             is SpeechChoice.FunAsr -> "funasr-ws @ ${Diagnostics.host(c.url)}"
             is SpeechChoice.Bailian -> "bailian-asr / ${c.model} / ${c.region.name}" + if (c.workspace.isNotEmpty()) " / workspace" else ""
             is SpeechChoice.Provider -> c.model + (app.providers.providers.value.firstOrNull { it.id == c.providerId }?.let { " @ ${Diagnostics.host(it.baseUrl)}" } ?: " (provider removed)")
+            SpeechChoice.SenseVoice -> "sensevoice-local / model " + if (SenseVoiceModel.isReady(app)) "ready" else "missing"
         }
         DiagnosticsSnapshot.Speech(
             choice = choice,

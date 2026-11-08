@@ -43,6 +43,7 @@ import com.wangzan101.mika.ui.components.StatusPill
 import com.wangzan101.mika.ui.components.InputRow
 import com.wangzan101.mika.ui.components.MikaButton
 import com.wangzan101.mika.ui.theme.MikaTheme
+import com.wangzan101.mika.voice.SenseVoiceModel
 import com.wangzan101.mika.voice.SpeechChoice
 import com.wangzan101.mika.voice.SpeechOptions
 import com.wangzan101.mika.voice.SystemSpeech
@@ -232,6 +233,7 @@ fun SpeechModelContent(
                 subtitle = tr(R.string.speech_off_note),
             )
         }
+        SenseVoiceSection(choice, actions)
         LiveRows(choice, doubaoConfigured, funAsrConfigured, actions)
         SpeechOptions.groups(ui.providers).forEach { g ->
             val p = g.provider
@@ -265,6 +267,65 @@ fun SpeechModelContent(
             }
         }
         FooterNote(tr(R.string.speech_footer), Modifier.padding(top = 8.dp))
+    }
+}
+
+/**
+ * 「本地离线」一组:SenseVoice 一行,外加模型的下载/删除。模型约 237 MB、不随安装包,
+ * 没下载时也能先选上,按住说话时会提示先来这里下载;下载进度就地显示,下完自动标成已下载。
+ */
+@Composable
+private fun SenseVoiceSection(choice: SpeechChoice, actions: SpeechPickActions) {
+    val c = MikaTheme.colors
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val modelState by SenseVoiceModel.state.collectAsState()
+    LaunchedEffect(Unit) { SenseVoiceModel.refresh(context) }
+    val downloading = modelState as? SenseVoiceModel.State.Downloading
+    val ready = modelState is SenseVoiceModel.State.Ready
+    val percent = downloading?.let { (it.done * 100 / it.total).toInt() } ?: 0
+    GroupLabel(tr(R.string.speech_sensevoice_group))
+    GroupCard {
+        RadioRow(
+            tr(R.string.speech_sensevoice_model),
+            selected = choice is SpeechChoice.SenseVoice,
+            onClick = { actions.pick(SpeechChoice.SenseVoice) },
+            first = true,
+            subtitle = tr(if (ready) R.string.speech_sensevoice_note else R.string.speech_sensevoice_missing_note),
+            trailing = {
+                when {
+                    ready -> StatusPill(tr(R.string.speech_sensevoice_ready), PillTone.Ok)
+                    downloading != null -> StatusPill(tr(R.string.speech_sensevoice_downloading, percent), PillTone.Neutral)
+                    else -> StatusPill(tr(R.string.speech_sensevoice_not_downloaded), PillTone.Neutral)
+                }
+            },
+        )
+        Box(Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 10.dp)) {
+            when {
+                downloading != null -> MikaButton(
+                    tr(R.string.speech_sensevoice_downloading, percent),
+                    onClick = {},
+                    Modifier.fillMaxWidth(),
+                    enabled = false,
+                )
+                ready -> Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        tr(R.string.speech_sensevoice_delete),
+                        Modifier.clip(MikaShapes.Pill).clickable { SenseVoiceModel.delete(context) }
+                            .padding(horizontal = 16.dp, vertical = 8.dp),
+                        style = MikaType.Body, color = c.bad,
+                    )
+                }
+                else -> MikaButton(
+                    tr(R.string.speech_sensevoice_download),
+                    onClick = { scope.launch { SenseVoiceModel.download(context) } },
+                    Modifier.fillMaxWidth(),
+                )
+            }
+        }
+    }
+    if (modelState is SenseVoiceModel.State.Failed) {
+        FooterNote(tr(R.string.speech_sensevoice_failed), Modifier.padding(top = 8.dp), color = c.bad)
     }
 }
 

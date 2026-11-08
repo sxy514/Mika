@@ -1,6 +1,8 @@
 package com.wangzan101.mika.ui.theme
 
 import android.content.Context
+import android.content.res.Configuration
+import android.graphics.drawable.ColorDrawable
 import android.provider.Settings
 import android.view.View
 import androidx.compose.animation.core.AnimationSpec
@@ -81,6 +83,20 @@ fun ComponentActivity.systemBarsFor(dark: Boolean) {
         statusBarStyle = if (dark) SystemBarStyle.dark(transparent) else SystemBarStyle.light(transparent, transparent),
         navigationBarStyle = if (dark) SystemBarStyle.dark(darkScrim) else SystemBarStyle.light(lightScrim, darkScrim),
     )
+}
+
+/**
+ * 窗口底色按设置里的外观先对上:主题资源(values / values-night)只认系统的深浅,界面配色却认设置里的外观,
+ * 两边不一致时(例如设置里强制深色、系统还是浅色)窗口第一帧是资源里的浅色底,界面没画出来之前先白闪一下。
+ * 在 onCreate 里、setContent 之前调一次,第一帧就不闪了。底色与界面令牌的页面底色、themes.xml 的 mika_bg 一致。
+ */
+fun ComponentActivity.windowBackgroundForAppearance() {
+    val dark = when (FeatureFlags.get(this).themeMode()) {
+        ThemeMode.System -> resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK == Configuration.UI_MODE_NIGHT_YES
+        ThemeMode.Light -> false
+        ThemeMode.Dark -> true
+    }
+    window.setBackgroundDrawable(ColorDrawable(if (dark) 0xFF0E0E10.toInt() else 0xFFF7F7F8.toInt()))
 }
 
 /** 深浅色按设置里的外观([appearanceDark]);同时把 Material 组件(弹窗、输入框、底部面板)的颜色对上。 */

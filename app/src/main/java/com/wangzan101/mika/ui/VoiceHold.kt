@@ -240,6 +240,7 @@ internal object VoiceCopy {
     fun unavailable(why: SpeechEngineSpec.Why): String = when (why) {
         SpeechEngineSpec.Why.DoubaoNotConfigured -> tr(R.string.speech_doubao_missing)
         SpeechEngineSpec.Why.BailianNotConfigured -> tr(R.string.speech_bailian_missing)
+        SpeechEngineSpec.Why.SenseVoiceModelMissing -> tr(R.string.speech_sensevoice_missing)
         SpeechEngineSpec.Why.NoSystemNoModel -> tr(R.string.voice_unavailable_no_engine)
         SpeechEngineSpec.Why.SystemGone -> tr(R.string.voice_unavailable_system_gone)
         SpeechEngineSpec.Why.SystemNoResponse -> tr(R.string.voice_unavailable_system_silent)

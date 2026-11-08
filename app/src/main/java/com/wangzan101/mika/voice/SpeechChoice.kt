@@ -47,6 +47,9 @@ sealed interface SpeechChoice {
         val workspace: String = "",
         val language: AsrLanguage = AsrLanguage.Auto,
     ) : SpeechChoice
+
+    /** 本地离线识别(阿里 SenseVoice);模型不随安装包,由用户在设置里单独下载,见 [SenseVoiceModel]。 */
+    data object SenseVoice : SpeechChoice
 }
 
 /**
@@ -236,6 +239,7 @@ class SpeechSettings(private val prefs: SharedPreferences, private val cipher: K
                 if (choice.workspace.isNotEmpty()) put("workspace", JsonPrimitive(choice.workspace))
                 if (choice.language != AsrLanguage.Auto) put("language", JsonPrimitive(choice.language.code))
             }
+            SpeechChoice.SenseVoice -> put(TYPE, JsonPrimitive("sensevoice"))
             is SpeechChoice.Provider -> {
                 put(TYPE, JsonPrimitive("provider"))
                 put("providerId", JsonPrimitive(choice.providerId))
@@ -250,6 +254,7 @@ class SpeechSettings(private val prefs: SharedPreferences, private val cipher: K
         "auto" -> SpeechChoice.Auto
         "system" -> SpeechChoice.System
         "off" -> SpeechChoice.Off
+        "sensevoice" -> SpeechChoice.SenseVoice
         "doubao" -> obj["resourceId"]?.jsonPrimitive?.contentOrNull
             ?.takeIf { it in DoubaoProtocol.resources }?.let { SpeechChoice.Doubao(it) }
         "funasr" -> obj["url"]?.jsonPrimitive?.contentOrNull?.let(FunAsrProtocol::normalize)

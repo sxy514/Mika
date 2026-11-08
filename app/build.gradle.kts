@@ -18,8 +18,8 @@ android {
         applicationId = "com.wangzan101.mika"
         minSdk = 30
         targetSdk = 35
-        versionCode = 39
-        versionName = "0.1.38"
+        versionCode = 40
+        versionName = "0.1.39"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
         buildConfigField("String", "GIT_HASH", "\"$gitHash\"")
         // 关于页版本号后的 Beta 标记;出正式版时改成 false
@@ -53,11 +53,27 @@ android {
     // 评测任务集(仓库根目录 eval/tasks)打进测试包的 assets,真机评测跑器从那里读题
     sourceSets.getByName("androidTest").assets.srcDir(rootProject.file("eval/tasks"))
 
+    // 固定签名:仓库里钉一份调试 keystore(keystore/mika-fixed.keystore),云端每次构建都用它签,
+    // 版本之间签名一致,才能直接覆盖安装、保留数据。这是公开的调试密钥(密码就写在这里),
+    // 只保证签名一致,不作发布签名用;换掉它等于换签名,旧版要先卸载。
+    signingConfigs {
+        create("fixed") {
+            storeFile = rootProject.file("keystore/mika-fixed.keystore")
+            storePassword = "mika-fixed"
+            keyAlias = "mika"
+            keyPassword = "mika-fixed"
+        }
+    }
+
     buildTypes {
         // 真机验收时并排安装,保留发行版和用户数据;默认构建标识不变。
         if (providers.gradleProperty("devInstall").isPresent) getByName("debug") {
             applicationIdSuffix = ".dev"
             resValue("string", "app_name", "Mika Dev")
+        }
+        // 调试包一律用固定签名,不用构建机临时生成的调试密钥(每台机器一把,签名对不上就装不上)
+        getByName("debug") {
+            signingConfig = signingConfigs.getByName("fixed")
         }
         // 看流畅度用的包:和发布版一样不可调试(调试包不做预先编译,界面慢好几倍,手感不作数),
         // 用本机调试签名,能直接覆盖调试包、保留数据;可被性能工具采样。./gradlew :app:assemblePerf
@@ -90,6 +106,8 @@ dependencies {
     implementation(libs.androidx.webkit)
     implementation(libs.kotlinx.coroutines.android)
     implementation(libs.okhttp)
+    // 离线语音识别运行时(SenseVoice,sherpa-onnx 2.0.1,只保留 arm64 库);模型不进安装包,用户在应用内单独下载
+    implementation(files("libs/sherpa-onnx-2.0.1-arm64.aar"))
     implementation(libs.kotlinx.serialization.json)
     implementation(libs.xz)
     implementation(libs.commonmark)
