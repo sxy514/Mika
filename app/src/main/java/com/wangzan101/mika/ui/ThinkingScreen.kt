@@ -71,16 +71,17 @@ fun ThinkingScreen(onBack: () -> Unit) {
     LaunchedEffect(copied) {
         if (copied) { delay(1_500); copied = false }
     }
-    // 复制全文在组合阶段先拼好（点击回调里不能再取字符串资源）
+    // 复制全文在组合阶段先拼好（点击回调里不能再取字符串资源）；
+    // joinToString 的 lambda 不是 @Composable 上下文，标签改用 context.getString 取
     val copyText = steps.joinToString("\n\n") { s ->
         buildString {
-            append(stringResource(R.string.live_step, s.step))
+            append(context.getString(R.string.live_step, s.step))
             s.tool?.let { append(" · ").append(it) }
             if (s.thinking.isNotBlank()) {
-                append("\n").append(stringResource(R.string.live_thinking)).append(":\n").append(s.thinking.trim())
+                append("\n").append(context.getString(R.string.live_thinking)).append(":\n").append(s.thinking.trim())
             }
             if (s.output.isNotBlank()) {
-                append("\n").append(stringResource(R.string.live_output)).append(":\n").append(s.output.trim())
+                append("\n").append(context.getString(R.string.live_output)).append(":\n").append(s.output.trim())
             }
         }
     }
@@ -174,9 +175,9 @@ private fun StepSection(s: StepTranscript) {
     Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 16.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(stringResource(R.string.live_step, s.step), style = MikaType.BodyStrong, color = c.ink)
-            if (!s.tool.isNullOrBlank()) {
+            s.tool?.takeIf { it.isNotBlank() }?.let { tool ->
                 Text(
-                    s.tool, Modifier.clip(MikaShapes.Pill).background(c.glass).padding(horizontal = 9.dp, vertical = 3.dp),
+                    tool, Modifier.clip(MikaShapes.Pill).background(c.glass).padding(horizontal = 9.dp, vertical = 3.dp),
                     style = MikaType.Caption, color = c.ink2, maxLines = 1,
                 )
             }
