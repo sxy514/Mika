@@ -292,7 +292,7 @@ fun TopBar(
         var origin by remember { mutableStateOf(Offset.Zero) }
         Box(
             Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars)
-                .padding(horizontal = 12.dp, top = 8.dp, bottom = 6.dp),
+                .padding(start = 12.dp, top = 8.dp, end = 12.dp, bottom = 6.dp),
         ) {
             Box(
                 Modifier.fillMaxWidth().height(MikaSize.TopBar)
