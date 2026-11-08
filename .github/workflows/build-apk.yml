@@ -1,4 +1,12 @@
-# GitHub Actions workflow for Mika 0.1.40 (Liquid Glass + SenseVoice, fixed signing) — v4
+# GitHub Actions workflow for Mika 0.1.40 (Liquid Glass + SenseVoice, fixed signing) — v5
+# v5: cure the recurring download deaths structurally:
+#  (1) gradle-wrapper.properties networkTimeout 10s -> 120s (a >10s CDN stall
+#      no longer kills a download attempt outright);
+#  (2) gradle/actions/setup-gradle caches the Gradle user home (distribution
+#      + all dependency jars) across runs, so after one good run almost
+#      nothing needs downloading again;
+#  (3) the build step retries once, so a mid-build dependency download
+#      flake (e.g. Build #9's kotlin-compiler-embeddable 504) self-heals.
 # v4: add a dedicated "Fetch Gradle distribution (retry)" step before the
 # build. On 2026-11-08 three consecutive runs (Build #5/#6/#7) all died in
 # under ~30 s because the wrapper's one-shot download of
@@ -31,6 +39,9 @@ jobs:
           distribution: temurin
           java-version: "17"
 
+      - name: Set up Gradle (cache)
+        uses: gradle/actions/setup-gradle@v4
+
       - name: Set up Android SDK
         uses: android-actions/setup-android@v4
         with:
@@ -54,8 +65,21 @@ jobs:
             sleep 20
           done
 
-      - name: Build debug APK
-        run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
+      - name: Build debug APK (retry once on network flake)
+        run: |
+          for i in 1 2; do
+            echo "Build attempt $i"
+            if ./gradlew :app:assembleDebug --no-daemon --stacktrace; then
+              echo "Build succeeded"
+              break
+            fi
+            if [ "$i" -eq 2 ]; then
+              echo "Build failed after 2 attempts"
+              exit 1
+            fi
+            echo "Attempt $i failed; retrying in 30s (a real compile error will fail again identically)"
+            sleep 30
+          done
 
       - name: Upload APK
         uses: actions/upload-artifact@v7
