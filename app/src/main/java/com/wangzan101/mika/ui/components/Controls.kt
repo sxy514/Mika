@@ -3,6 +3,7 @@ package com.wangzan101.mika.ui.components
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -25,6 +26,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.alpha
@@ -33,9 +37,16 @@ import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.CornerRadius
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.drawscope.translate
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.layer.drawLayer
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInRoot
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.semantics.Role
@@ -239,9 +250,14 @@ fun BarIconButton(
     }
 }
 
+private val TopBarBlur = BlurEffect(64f, 64f, TileMode.Clamp)
+
 /**
  * 顶栏:56 高,左右各一个图标按钮位,标题居中,可带一行副标题。
  * 底色默认是玻璃色(Liquid Glass):半透,能隐约透出页面底的光晕。
+ * 传了 [backdrop](聊天页)时变悬浮玻璃胶囊(Liquid Glass v2):左右留 12、上留 8 的悬浮胶囊,
+ * 拿后面滚动的内容做真背景模糊(与输入栏 [GlassBar] 同一套机制),内容滚到它下面会被磨砂掉,
+ * 类似 iOS / ColorOS 设置页顶部那条悬浮搜索栏;不传时维持整宽平铺(子页面)。
  */
 @Composable
 fun TopBar(
@@ -255,27 +271,78 @@ fun TopBar(
     subtitle: String? = null,
     subtitleColor: Color = Color.Unspecified,
     background: Color = MikaTheme.colors.glass,
+    backdrop: GlassBackdrop? = null,
 ) {
     val c = MikaTheme.colors
+    val rowContent: @Composable RowScope.() -> Unit = {
+        if (left != null) BarIconButton(left, leftLabel, onLeft, badge = leftBadge) else Spacer(Modifier.size(MikaSize.IconButton))
+        Column(Modifier.weight(1f).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
+            Text(title, style = MikaType.Title, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (!subtitle.isNullOrEmpty()) {
+                Text(
+                    subtitle, style = MikaType.Hint, fontWeight = FontWeight.Medium,
+                    color = if (subtitleColor == Color.Unspecified) c.ink3 else subtitleColor, maxLines = 1,
+                )
+            }
+        }
+        if (right != null) Row(verticalAlignment = Alignment.CenterVertically, content = right)
+        else Spacer(Modifier.size(MikaSize.IconButton))
+    }
+    if (backdrop != null) {
+        var origin by remember { mutableStateOf(Offset.Zero) }
+        Box(
+            Modifier.fillMaxWidth().windowInsetsPadding(WindowInsets.statusBars)
+                .padding(horizontal = 12.dp, top = 8.dp, bottom = 6.dp),
+        ) {
+            Box(
+                Modifier.fillMaxWidth().height(MikaSize.TopBar)
+                    .floatShadow(c, MikaShapes.Pill).clip(MikaShapes.Pill)
+                    .onGloballyPositioned { origin = it.positionInRoot() },
+            ) {
+                Box(
+                    Modifier.matchParentSize()
+                        .graphicsLayer { renderEffect = TopBarBlur; clip = true }
+                        .drawBehind {
+                            val d = backdrop.origin - origin
+                            translate(d.x, d.y) { drawLayer(backdrop.layer) }
+                        },
+                )
+                Row(
+                    Modifier.fillMaxWidth().height(MikaSize.TopBar)
+                        .background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    background.copy(alpha = (background.alpha + 0.12f).coerceAtMost(1f)),
+                                    background.copy(alpha = (background.alpha - 0.08f).coerceAtLeast(0f)),
+                                ),
+                            ),
+                        )
+                        .border(
+                            0.5.dp,
+                            Brush.verticalGradient(
+                                listOf(
+                                    Color.White.copy(alpha = if (c.isDark) 0.5f else 0.85f),
+                                    c.glassEdge,
+                                ),
+                            ),
+                            MikaShapes.Pill,
+                        )
+                        .padding(horizontal = 8.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.spacedBy(4.dp),
+                    content = rowContent,
+                )
+            }
+        }
+        return
+    }
     Box(Modifier.fillMaxWidth().background(background).windowInsetsPadding(WindowInsets.statusBars)) {
         Row(
             Modifier.fillMaxWidth().height(MikaSize.TopBar).padding(horizontal = 8.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),
-        ) {
-            if (left != null) BarIconButton(left, leftLabel, onLeft, badge = leftBadge) else Spacer(Modifier.size(MikaSize.IconButton))
-            Column(Modifier.weight(1f).padding(horizontal = 4.dp), horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(title, style = MikaType.Title, color = c.ink, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                if (!subtitle.isNullOrEmpty()) {
-                    Text(
-                        subtitle, style = MikaType.Hint, fontWeight = FontWeight.Medium,
-                        color = if (subtitleColor == Color.Unspecified) c.ink3 else subtitleColor, maxLines = 1,
-                    )
-                }
-            }
-            if (right != null) Row(verticalAlignment = Alignment.CenterVertically, content = right)
-            else Spacer(Modifier.size(MikaSize.IconButton))
-        }
+            content = rowContent,
+        )
     }
 }
 

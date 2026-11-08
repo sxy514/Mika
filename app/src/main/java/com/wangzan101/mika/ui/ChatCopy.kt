@@ -24,7 +24,6 @@ object ChatCopy {
     data class Example(val kind: ExampleKind, val text: String)
 
     val examples get() = listOf(
-        Example(ExampleKind.App, tr(R.string.chat_example_follow)),
         Example(ExampleKind.App, tr(R.string.chat_example_group_summary)),
         Example(ExampleKind.Web, tr(R.string.chat_example_jobs)),
         Example(ExampleKind.App, tr(R.string.chat_example_multi_step)),

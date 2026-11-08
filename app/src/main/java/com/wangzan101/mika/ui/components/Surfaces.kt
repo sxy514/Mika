@@ -1,6 +1,12 @@
 package com.wangzan101.mika.ui.components
 
 import android.os.Build
+import androidx.compose.animation.core.LinearEasing
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -52,27 +58,40 @@ import com.wangzan101.mika.ui.theme.MikaTheme
 import com.wangzan101.mika.ui.theme.MikaType
 
 /**
- * 页面底(Liquid Glass):近白(深色下近黑)的底上铺三团很淡的彩色光晕——左上蓝、右下绿、右侧橙。
- * 半透的卡片与玻璃悬浮件压在上面时能透出这些颜色,才有玻璃折射的感觉;光晕只画一次,不随内容滚动。
+ * 页面底(Liquid Glass v2):近白(深色下近黑)的底上铺三团彩色光晕——左上蓝、右下绿、右侧橙。
+ * 半透的卡片与玻璃悬浮件压在上面时能透出这些颜色,才有玻璃折射的感觉。
+ * v2 起光晕会缓慢流动:三团光以不同的周期(17/23/29 秒)往返漂移、浓度随之呼吸,
+ * 类似 iOS 的动态流光底;不随内容滚动。系统关了动画(reduceMotion)时停在中间相位,完全静止。
  */
 @Composable
 fun PageBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
     val c = MikaTheme.colors
+    val reduce = MikaTheme.reduceMotion
+    val flow = rememberInfiniteTransition(label = "page-halo-flow")
+    val fa by flow.animateFloat(0f, 1f, infiniteRepeatable(tween(17_000, easing = LinearEasing), RepeatMode.Reverse), label = "halo-a")
+    val fb by flow.animateFloat(0f, 1f, infiniteRepeatable(tween(23_000, easing = LinearEasing), RepeatMode.Reverse), label = "halo-b")
+    val fc by flow.animateFloat(0f, 1f, infiniteRepeatable(tween(29_000, easing = LinearEasing), RepeatMode.Reverse), label = "halo-c")
+    val f1 = if (reduce) 0.35f else fa
+    val f2 = if (reduce) 0.6f else fb
+    val f3 = if (reduce) 0.45f else fc
     Box(
         modifier.fillMaxSize().background(c.bg).drawBehind {
-            val r = size.maxDimension * 0.8f
-            val a = if (c.isDark) 1.7f else 1f
+            val r = size.maxDimension * 0.85f
+            val a = if (c.isDark) 1.55f else 1f
+            val blue = Offset(size.width * (0.02f + 0.28f * f1), size.height * (0.02f + 0.13f * f1))
             drawCircle(
-                Brush.radialGradient(listOf(c.accent.copy(alpha = 0.13f * a), Color.Transparent), center = Offset(size.width * 0.05f, size.height * 0.02f), radius = r),
-                radius = r, center = Offset(size.width * 0.05f, size.height * 0.02f),
+                Brush.radialGradient(listOf(c.accent.copy(alpha = (0.16f + 0.05f * f2) * a), Color.Transparent), center = blue, radius = r),
+                radius = r, center = blue,
             )
+            val green = Offset(size.width * (1.02f - 0.25f * f2), size.height * (0.98f - 0.18f * f2))
             drawCircle(
-                Brush.radialGradient(listOf(c.series[2].copy(alpha = 0.09f * a), Color.Transparent), center = Offset(size.width * 1.02f, size.height * 0.98f), radius = r),
-                radius = r, center = Offset(size.width * 1.02f, size.height * 0.98f),
+                Brush.radialGradient(listOf(c.series[2].copy(alpha = (0.11f + 0.04f * f3) * a), Color.Transparent), center = green, radius = r),
+                radius = r, center = green,
             )
+            val orange = Offset(size.width * (1.05f - 0.12f * f3), size.height * (0.30f + 0.25f * f3))
             drawCircle(
-                Brush.radialGradient(listOf(c.series[1].copy(alpha = 0.06f * a), Color.Transparent), center = Offset(size.width * 1.05f, size.height * 0.38f), radius = r * 0.8f),
-                radius = r * 0.8f, center = Offset(size.width * 1.05f, size.height * 0.38f),
+                Brush.radialGradient(listOf(c.series[1].copy(alpha = (0.08f + 0.03f * f1) * a), Color.Transparent), center = orange, radius = r * 0.8f),
+                radius = r * 0.8f, center = orange,
             )
         },
         content = content,
@@ -184,7 +203,7 @@ fun Modifier.glassSource(backdrop: GlassBackdrop?): Modifier =
             drawLayer(backdrop.layer)
         }
 
-private val GlassBlur = BlurEffect(44f, 44f, TileMode.Clamp)
+private val GlassBlur = BlurEffect(64f, 64f, TileMode.Clamp)
 
 /**
  * 玻璃输入栏的外壳:半透明底 + 背景模糊 + 悬浮阴影,高至少 56。
