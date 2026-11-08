@@ -434,6 +434,7 @@ private fun MikaRoot(
                 onMemory = { nav.pushFromDrawer(Route.Memory) },
                 onSettings = { nav.pushFromDrawer(Route.Settings) },
                 onBrowser = { nav.pushFromDrawer(Route.Browser) },
+                onThinking = { nav.pushFromDrawer(Route.Thinking) },
                 onScreens = { nav.pushFromDrawer(Route.Screens) },
                 onAbout = { nav.pushFromDrawer(Route.About) },
                 updateAvailable = AboutCopy.drawerDot(updateState),
@@ -479,6 +480,7 @@ private fun MikaRoot(
         Route.Models -> ModelsScreen(store, onBack = back, onOpenSpeech = { nav.push(Route.SpeechModel) }, onOpenUsage = { nav.push(Route.Usage) })
         Route.Usage -> UsageScreen(app.usage, store.providers, onBack = back)
         Route.SpeechModel -> SpeechModelScreen(store, onBack = back)
+        Route.Thinking -> ThinkingScreen(onBack = back)
         Route.About -> AboutScreen(
             versionName = BuildConfig.VERSION_NAME, build = BuildConfig.GIT_HASH, beta = BuildConfig.BETA,
             update = updateState,

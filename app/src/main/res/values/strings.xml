@@ -119,4 +119,17 @@
     <string name="speech_asr_language_ja">Japanese</string>
     <string name="speech_asr_language_yue">Cantonese</string>
     <string name="speech_asr_language_ko">Korean</string>
+    <string name="live_title">Thinking &amp; output</string>
+    <string name="live_running">Running</string>
+    <string name="live_last">Most recent run</string>
+    <string name="live_empty">Nothing here yet. When a task runs, the model's thinking and output appear here step by step.</string>
+    <string name="live_step">Step %1$d</string>
+    <string name="live_thinking">Thinking</string>
+    <string name="live_output">Output</string>
+    <string name="live_copy_all">Copy all</string>
+    <string name="live_copied">Copied</string>
+    <string name="live_follow">Latest</string>
+    <string name="live_follow_on">Following the latest</string>
+    <string name="live_follow_off">Follow paused</string>
+    <string name="live_generating">Generating</string>
 </resources>

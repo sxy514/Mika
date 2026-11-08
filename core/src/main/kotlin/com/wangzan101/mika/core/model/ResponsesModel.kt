@@ -65,20 +65,22 @@ class ResponsesModel(
     private val json = Json { ignoreUnknownKeys = true }
 
     override suspend fun complete(system: String, messages: List<Message>, tools: List<ToolSpec>): ModelReply =
-        completeStreaming(system, messages, tools) {}
+        completeStreaming(system, messages, tools, {}, null)
 
     override suspend fun completeStreaming(
         system: String, messages: List<Message>, tools: List<ToolSpec>, onText: (String) -> Unit,
+        onThinking: ((String) -> Unit)?,
     ): ModelReply {
         var includeReasoning = true
         var fresh = false
         while (true) {
-            val stream = ResponsesStream(onText, ::errorOf)
+            val stream = ResponsesStream(onText, ::errorOf, onThinking ?: {})
             val bearer = token.get(fresh)
             val (status, retryAfter, text) = HttpSupport.stream(http, request(bearer, system, messages, tools, includeReasoning), stream::accept)
             if (status in 200..299) {
                 if (text.isNotEmpty()) return stream.fromBody(text).also { reply ->
                     reply.parts.filterIsInstance<Part.Text>().joinToString("") { it.text }.takeIf(String::isNotEmpty)?.let(onText)
+                    reply.parts.filterIsInstance<Part.Thinking>().joinToString("") { it.text }.takeIf(String::isNotEmpty)?.let { t -> onThinking?.invoke(t) }
                 }
                 return stream.finish()
             }
@@ -226,9 +228,12 @@ private fun JsonObject.str(k: String): String? = (this[k] as? JsonPrimitive)?.ta
 private class ResponsesStream(
     private val onText: (String) -> Unit,
     private val errorOf: (String?, String, String?) -> ModelError?,
+    private val onThinking: (String) -> Unit,
 ) {
     private val json = Json { ignoreUnknownKeys = true }
     private val visible = StringBuilder()
+    /** 推理摘要的流式增量（response.reasoning_summary_text.delta）；只用于展示，权威文本仍以 finish() 从完整条目拼的为准。 */
+    private val thinkingLive = StringBuilder()
     private val items = mutableListOf<JsonObject>()
     private var final: JsonObject? = null
     private var incomplete = false
@@ -241,6 +246,10 @@ private class ResponsesStream(
             "response.output_text.delta" -> root.str("delta")?.takeIf { it.isNotEmpty() }?.let {
                 visible.append(it)
                 onText(visible.toString())
+            }
+            "response.reasoning_summary_text.delta" -> root.str("delta")?.takeIf { it.isNotEmpty() }?.let {
+                thinkingLive.append(it)
+                onThinking(thinkingLive.toString())
             }
             "response.output_item.done" -> (root["item"] as? JsonObject)?.let { items += it }
             "response.completed" -> final = root["response"] as? JsonObject ?: JsonObject(emptyMap())

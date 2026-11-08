@@ -36,11 +36,13 @@ sealed interface TaskState {
      * [reason] 是模型给这次调用写的用意(调用参数里的 reason);没写时为 null。
      * [narration] 是模型随这次调用写的话(进度说明,不是回答);界面上「在做什么」先用它,没有再用 [reason]。
      * [preview] 是当前模型请求已流出的可见文字，尚未确认是最终答复还是工具进度。
+     * [thinking] 是当前模型请求已流出的思考文字（服务商回传了可读思考时才有），只用于展示。
      */
     data class Running(
         val step: Int, val note: String, val tool: String? = null, val progress: RunProgress? = null, val reason: String? = null,
         val narration: String? = null,
         val preview: String? = null,
+        val thinking: String? = null,
     ) : TaskState
     /** 一个能力的前置条件此刻不满足,停在这里等(见 [GateReason]);条件满足或用户点了继续后恢复 Running。 */
     data class Held(val reason: GateReason) : TaskState

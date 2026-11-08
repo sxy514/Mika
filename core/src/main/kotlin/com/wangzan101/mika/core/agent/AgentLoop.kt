@@ -204,6 +204,18 @@ class AgentLoop(
     private val _state = MutableStateFlow<TaskState>(TaskState.Idle)
     val state: StateFlow<TaskState> = _state.asStateFlow()
 
+    /** 每步的思考与输出（侧边栏「思考与输出」页读它）；只在 [streamReplies] 开着时记录。 */
+    private val _transcript = MutableStateFlow<List<StepTranscript>>(emptyList())
+    val transcript: StateFlow<List<StepTranscript>> = _transcript.asStateFlow()
+
+    /** 更新第 [step] 步的记录（没有就新建一条）；同一步被重问时沿用同一条。 */
+    private fun updateTranscript(step: Int, change: (StepTranscript) -> StepTranscript) {
+        val list = _transcript.value
+        val index = list.indexOfFirst { it.step == step }
+        _transcript.value = if (index >= 0) list.mapIndexed { i, old -> if (i == index) change(old) else old }
+        else list + change(StepTranscript(step))
+    }
+
     @Volatile private var usedMemory: List<String> = emptyList()
     /** 本次任务记忆块里列出的条目编号;任务结束后读取。 */
     val usedMemoryIds: List<String> get() = usedMemory
@@ -494,7 +506,7 @@ class AgentLoop(
             refreshOffer()
             var asked = now()
             val routed = try {
-                routedOrRedirect(inbox, history, specs, track, step, { asked = it }, previewFor(step))
+                routedOrRedirect(inbox, history, specs, track, step, { asked = it }, previewFor(step), thinkingFor(step))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -513,7 +525,7 @@ class AgentLoop(
                     // 提议的调用尚未写进历史、也没有执行；重问一次，只给直接回答的机会。
                     val discussion = history + ctx.notice("conversation_intent",
                         "The user is discussing or reviewing this time. Answer this question directly, without reading or operating apps, websites or other outside content.")
-                    reply = try { caller.ask(discussion, emptyList(), step, using = model, onText = previewFor(step)) }
+                    reply = try { caller.ask(discussion, emptyList(), step, using = model, onText = previewFor(step), onThinking = thinkingFor(step)) }
                     catch (e: CancellationException) { throw e }
                     catch (e: Exception) { return StopRules.modelFailed(e) }
                     used = model
@@ -534,6 +546,18 @@ class AgentLoop(
             val narration = text.takeIf { calls.isNotEmpty() && it.isNotEmpty() }
             _state.value = TaskState.Running(step, note, tool, progress = progressState(), reason = reason, narration = narration,
                 preview = text.takeIf { streamReplies && calls.isEmpty() && it.isNotEmpty() })
+            // 这步的思考与输出定稿（流式时先到的草稿以回复里的全文为准）
+            if (streamReplies) {
+                val thought = reply.parts.filterIsInstance<Part.Thinking>().joinToString("") { it.text }
+                updateTranscript(step) { old ->
+                    old.copy(
+                        thinking = thought.ifEmpty { old.thinking },
+                        output = text.ifEmpty { old.output },
+                        tool = tool?.let { tools.verb(it) } ?: old.tool,
+                        live = false,
+                    )
+                }
+            }
             // 带调用的回复等执行完再记:要看端口是否报告了密码框
             fun recordReply(argsJson: String?) = emit(RunEvent.ModelReply(
                 now(), step, RunEvent.clip(Redactor.text(text)), tool, argsJson,
@@ -841,10 +865,11 @@ class AgentLoop(
     private suspend fun routedOrRedirect(
         inbox: RunInbox?, history: List<Message>, specs: List<ToolSpec>, track: StepTrack, step: Int, restarted: (Long) -> Unit,
         onText: ((String) -> Unit)?,
+        onThinking: ((String) -> Unit)? = null,
     ): Pair<ModelReply, ChatModel>? {
-        if (inbox == null) return caller.routed(history, specs, track, step, restarted, onText)
+        if (inbox == null) return caller.routed(history, specs, track, step, restarted, onText, onThinking)
         return coroutineScope {
-            val pending = async { caller.routed(history, specs, track, step, restarted, onText) }
+            val pending = async { caller.routed(history, specs, track, step, restarted, onText, onThinking) }
             select<Pair<ModelReply, ChatModel>?> {
                 pending.onAwait { it }
                 inbox.redirects.onReceive {
@@ -866,6 +891,8 @@ class AgentLoop(
         val current = _state.value as? TaskState.Running
         val partial = current?.takeIf { it.step == step }?.preview?.trim()
         if (current?.preview != null) _state.value = current.copy(preview = null)
+        // 被撤掉的这一步：记录里已流出的部分保留，标成不再生成
+        if (streamReplies && _transcript.value.any { it.step == step }) updateTranscript(step) { it.copy(live = false) }
         if (!partial.isNullOrEmpty() && steers.isNotEmpty()) {
             history += Message(Role.Assistant, listOf(Part.Text(partial)), Author.Mika)
             emit(RunEvent.State(now(), "reply_interrupted", RunEvent.clip(Redactor.text(partial))))
@@ -877,7 +904,19 @@ class AgentLoop(
         val preview = CompletionPlanBlock.visible(raw)
         val current = _state.value as? TaskState.Running
         // 撤掉之后网络线程可能还送来一段:不再显示,免得屏幕上比历史里多
-        if (current?.step == step && interruptedStep != step) _state.value = current.copy(preview = preview.takeIf(String::isNotEmpty))
+        if (current?.step == step && interruptedStep != step) {
+            _state.value = current.copy(preview = preview.takeIf(String::isNotEmpty))
+            if (preview.isNotEmpty()) updateTranscript(step) { it.copy(output = preview, live = true) }
+        }
+    }
+
+    /** 思考流和 [previewFor] 同理：写进当前步的状态和记录；思考原文没有计划块标记，不用剥。 */
+    private fun thinkingFor(step: Int): ((String) -> Unit)? = if (!streamReplies) null else { raw ->
+        val current = _state.value as? TaskState.Running
+        if (current?.step == step && interruptedStep != step) {
+            if (current.thinking != raw) _state.value = current.copy(thinking = raw.takeIf(String::isNotEmpty))
+            if (raw.isNotEmpty()) updateTranscript(step) { it.copy(thinking = raw, live = true) }
+        }
     }
 
     /**
@@ -995,7 +1034,7 @@ class AgentLoop(
             _state.value = TaskState.Running(step, "")
             val asked = now()
             val reply = try {
-                caller.ask(history, TurnPolicy.finalTools(specs, tools::verb), step, onText = previewFor(step))
+                caller.ask(history, TurnPolicy.finalTools(specs, tools::verb), step, onText = previewFor(step), onThinking = thinkingFor(step))
             } catch (e: CancellationException) {
                 throw e
             } catch (e: Exception) {
@@ -1005,6 +1044,18 @@ class AgentLoop(
             history += Message(Role.Assistant, cleanReplyParts(reply.parts, text), Author.Mika)
             val calls = reply.parts.filterIsInstance<Part.ToolCall>()
             val call = calls.firstOrNull { tools.verb(it.name) in TurnPolicy.FINAL_VERBS }
+            // 收尾这一轮的思考与输出同样定稿
+            if (streamReplies) {
+                val thought = reply.parts.filterIsInstance<Part.Thinking>().joinToString("") { it.text }
+                updateTranscript(step) { old ->
+                    old.copy(
+                        thinking = thought.ifEmpty { old.thinking },
+                        output = text.ifEmpty { old.output },
+                        tool = call?.let { tools.verb(it.name) } ?: old.tool,
+                        live = false,
+                    )
+                }
+            }
             val retryWaitMs = caller.lastRetryWaitMs
             val repliedAtMs = now()
             val latencyMs = repliedAtMs - asked - retryWaitMs

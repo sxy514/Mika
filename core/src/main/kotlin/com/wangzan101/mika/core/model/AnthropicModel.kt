@@ -76,8 +76,9 @@ class AnthropicModel(
 
     override suspend fun completeStreaming(
         system: String, messages: List<Message>, tools: List<ToolSpec>, onText: (String) -> Unit,
+        onThinking: ((String) -> Unit)?,
     ): ModelReply {
-        val stream = AnthropicStream(endpoint, onText, ::parseUsage)
+        val stream = AnthropicStream(endpoint, onText, ::parseUsage, onThinking ?: {})
         // 被拒的那次没有事件(不是 2xx 时 HttpSupport.stream 不调 accept),重发接着用这个 stream
         val (status, retryAfter, text) = dropStaleThinking(messages) {
             HttpSupport.stream(http, request(system, messages, tools, stream = true), stream::accept)
@@ -85,6 +86,7 @@ class AnthropicModel(
         if (status !in 200..299) throw mapError(status, retryAfter, text)
         if (text.isNotEmpty()) return parse(text).also { reply ->
             reply.parts.filterIsInstance<Part.Text>().joinToString("") { it.text }.takeIf(String::isNotEmpty)?.let(onText)
+            reply.parts.filterIsInstance<Part.Thinking>().joinToString("") { it.text }.takeIf(String::isNotEmpty)?.let { t -> onThinking?.invoke(t) }
         }
         return stream.finish()
     }
@@ -277,6 +279,7 @@ private class AnthropicStream(
     private val endpoint: String,
     private val onText: (String) -> Unit,
     private val usageOf: (JsonElement?) -> Usage?,
+    private val onThinking: (String) -> Unit,
 ) {
     private data class Block(
         val type: String, val id: String = "", val name: String = "",
@@ -320,7 +323,10 @@ private class AnthropicStream(
                     "text_delta" -> (delta["text"] as? JsonPrimitive)?.contentOrNull?.let {
                         block.text.append(it); visible.append(it); onText(visible.toString())
                     }
-                    "thinking_delta" -> (delta["thinking"] as? JsonPrimitive)?.contentOrNull?.let { block.text.append(it) }
+                    "thinking_delta" -> (delta["thinking"] as? JsonPrimitive)?.contentOrNull?.let {
+                        block.text.append(it)
+                        onThinking(blocks.values.filter { b -> b.type == "thinking" }.joinToString("") { b -> b.text.toString() })
+                    }
                     "signature_delta" -> (delta["signature"] as? JsonPrimitive)?.contentOrNull?.let { block.signature.append(it) }
                     "input_json_delta" -> (delta["partial_json"] as? JsonPrimitive)?.contentOrNull?.let { block.input.append(it) }
                 }

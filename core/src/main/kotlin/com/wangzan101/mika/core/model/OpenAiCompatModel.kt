@@ -60,19 +60,20 @@ class OpenAiCompatModel(
         if (status !in 200..299) throw mapError(status, retryAfter, text)
         // 有的兼容端点不守 OpenAI 的默认值:没让流式也照样回 SSE(本地、局域网上的自建服务常见)。按流读完再拼,别把 `data:` 当成坏 JSON。
         if (!looksLikeEvents(text)) return parse(text)
-        val stream = OpenAiStream({}, ::parseUsage, ::thinking)
+        val stream = OpenAiStream({}, ::parseUsage, ::thinking, {})
         response.replay(eventsOf(text), stream::accept)
         return stream.finish()
     }
 
     override suspend fun completeStreaming(
         system: String, messages: List<Message>, tools: List<ToolSpec>, onText: (String) -> Unit,
+        onThinking: ((String) -> Unit)?,
     ): ModelReply {
-        var stream = OpenAiStream(onText, ::parseUsage, ::thinking)
+        var stream = OpenAiStream(onText, ::parseUsage, ::thinking, onThinking ?: {})
         var response = HttpSupport.stream(http, request(system, messages, tools, stream = true), stream::accept)
         if (response.status == 400 && response.body.contains("stream_options")) {
             // 一些兼容端点能流式生成，却没有用量选项。
-            stream = OpenAiStream(onText, ::parseUsage, ::thinking)
+            stream = OpenAiStream(onText, ::parseUsage, ::thinking, onThinking ?: {})
             response = HttpSupport.stream(http, request(system, messages, tools, stream = true, includeUsage = false), stream::accept)
         }
         val (status, retryAfter, text) = response
@@ -80,11 +81,13 @@ class OpenAiCompatModel(
             // 不支持流式传输的兼容端点仍可按原接口完成任务。
             if (status == 400 && text.contains("stream", ignoreCase = true)) return complete(system, messages, tools).also {
                 it.parts.filterIsInstance<Part.Text>().joinToString("") { part -> part.text }.takeIf(String::isNotEmpty)?.let(onText)
+                it.parts.filterIsInstance<Part.Thinking>().joinToString("") { part -> part.text }.takeIf(String::isNotEmpty)?.let { t -> onThinking?.invoke(t) }
             }
             throw mapError(status, retryAfter, text)
         }
         if (text.isNotEmpty()) return parse(text).also { reply ->
             reply.parts.filterIsInstance<Part.Text>().joinToString("") { it.text }.takeIf(String::isNotEmpty)?.let(onText)
+            reply.parts.filterIsInstance<Part.Thinking>().joinToString("") { it.text }.takeIf(String::isNotEmpty)?.let { t -> onThinking?.invoke(t) }
         }
         return stream.finish()
     }
@@ -325,6 +328,7 @@ private class OpenAiStream(
     private val onText: (String) -> Unit,
     private val usageOf: (JsonElement?) -> Usage?,
     private val thinkingOf: (String, ReasoningVia) -> Part.Thinking,
+    private val onThinking: (String) -> Unit,
 ) {
     private data class Call(val id: StringBuilder = StringBuilder(), val name: StringBuilder = StringBuilder(),
         val args: StringBuilder = StringBuilder())
@@ -378,7 +382,10 @@ private class OpenAiStream(
     private fun appendThinking(t: String, via: ReasoningVia) {
         if (t.isEmpty()) return
         if (thinkingVia == null) thinkingVia = via
-        if (via == thinkingVia) thinking.append(t)
+        if (via == thinkingVia) {
+            thinking.append(t)
+            onThinking(thinking.toString())
+        }
     }
 
     private fun appendVisible(t: String) {

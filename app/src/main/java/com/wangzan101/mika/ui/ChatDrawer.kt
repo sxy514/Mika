@@ -213,6 +213,9 @@ fun ChatDrawer(
     onSettings: () -> Unit,
     onOpen: (DrawerConversation) -> Unit,
     onAbout: () -> Unit = {},
+    /** 「思考与输出」页：看最近一次任务每步的思考与输出；[thinkingDot] 是有任务正在跑。 */
+    onThinking: () -> Unit = {},
+    thinkingDot: Boolean = false,
     /** 完全退出 Mika(先问一句)。 */
     onQuit: () -> Unit = {},
     /** 有新版本:「关于 Mika」带小红点。 */
@@ -247,6 +250,7 @@ fun ChatDrawer(
             NavEntry(MikaIcons.Clock, stringResource(R.string.drawer_plans), onClick = onPlans)
             NavEntry(MikaIcons.Heart, stringResource(R.string.memory_and_skills), onClick = onMemory)
             NavEntry(MikaIcons.Globe, stringResource(R.string.drawer_browser), onClick = onBrowser)
+            NavEntry(MikaIcons.Spark, stringResource(R.string.live_title), dot = thinkingDot, onClick = onThinking)
             // 和上面几项隔开一点:这是把 Mika 整个停下来,不是换一页
             Box(Modifier.padding(top = 4.dp)) {
                 NavEntry(MikaIcons.Power, stringResource(R.string.quit_title), onClick = onQuit)
@@ -496,6 +500,8 @@ fun ChatWithDrawer(
     onScreens: () -> Unit = {},
     onSettings: () -> Unit,
     onAbout: () -> Unit = {},
+    /** 去「思考与输出」页（侧栏里的一项）。 */
+    onThinking: () -> Unit = {},
     /** 有新版本:侧栏「关于 Mika」带小红点。 */
     updateAvailable: Boolean = false,
     /** 从侧栏进去的页面刚退回来:当场打开侧栏,回到进去之前的样子。 */
@@ -513,6 +519,7 @@ fun ChatWithDrawer(
     }
     val ui by vm.ui.collectAsState()
     val others by vm.otherRunning.collectAsState()
+    val liveLog by com.wangzan101.mika.task.RunLiveLog.state.collectAsState()
     fun close(then: () -> Unit = {}) {
         scope.launch {
             if (reduceMotion) drawer.snapTo(DrawerValue.Closed) else drawer.close()
@@ -596,6 +603,8 @@ fun ChatWithDrawer(
                     onMemory = { leave(onMemory) },
                     onSettings = { leave(onSettings) },
                     onBrowser = { leave(onBrowser) },
+                    onThinking = { leave(onThinking) },
+                    thinkingDot = liveLog.running,
                     onScreens = { leave(onScreens) },
                     onAbout = { leave(onAbout) },
                     onQuit = { leave { confirmingQuit = true } },

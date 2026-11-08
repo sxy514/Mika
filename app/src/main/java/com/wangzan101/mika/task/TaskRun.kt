@@ -277,6 +277,8 @@ class TaskRun(
     /** 用户点了停止:还没交给模型的插话一起作废,不当成下一件事。 */
     @Volatile private var stopPressed = false
     @Volatile private var loop: AgentLoop? = null
+    /** 「思考与输出」记录的凭据（见 [RunLiveLog]）；-1 是还没开始过。 */
+    @Volatile private var liveToken: Long = -1
     val activeAsk: Delivery.Ask? get() = loop?.activeAsk
     @Volatile private var gate: TaskGate? = null
     @Volatile var takeover: Takeover? = null
@@ -895,6 +897,9 @@ class TaskRun(
             )
             loop = agent
             liveFeed = agent.events.subscribe(liveEvents)
+            // 「思考与输出」：把这轮每步的思考与输出同步给侧边栏页面；任务结束由 finally 标停
+            liveToken = RunLiveLog.begin(goal)
+            side.launch { agent.transcript.collect { steps -> RunLiveLog.update(liveToken, steps) } }
             mcpExternalId?.let { mcpEvents = (service.application as MikaApp).remoteTasks.attach(it, agent.events) }
             kit = LearnKit(switches, memory, utterances, tools, agent, catalog, knowledge, model, light, runStore, agent.flags.replay, priorTurns)
             suspend fun <T> io(fallback: T, call: () -> T): T =
@@ -1000,6 +1005,7 @@ class TaskRun(
         } finally {
             if (resultReadyAtMs == 0L) resultReadyAtMs = SystemClock.elapsedRealtime()
             handoffUnconsumed()
+            RunLiveLog.finish(liveToken)
             side.cancel()
             _frames.value = null
             _webOpen.value = false

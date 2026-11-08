@@ -118,4 +118,17 @@
     <string name="speech_asr_language_ja">日语</string>
     <string name="speech_asr_language_yue">粤语</string>
     <string name="speech_asr_language_ko">韩语</string>
+    <string name="live_title">思考与输出</string>
+    <string name="live_running">正在运行</string>
+    <string name="live_last">最近一次运行</string>
+    <string name="live_empty">还没有内容。任务运行时，模型的思考和输出会按步骤出现在这里。</string>
+    <string name="live_step">第 %1$d 步</string>
+    <string name="live_thinking">思考</string>
+    <string name="live_output">输出</string>
+    <string name="live_copy_all">复制全部</string>
+    <string name="live_copied">已复制</string>
+    <string name="live_follow">回到最新</string>
+    <string name="live_follow_on">正在跟随最新</string>
+    <string name="live_follow_off">已暂停跟随</string>
+    <string name="live_generating">正在生成</string>
 </resources>
