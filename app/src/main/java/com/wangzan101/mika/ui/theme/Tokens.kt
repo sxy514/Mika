@@ -44,7 +44,7 @@ object MikaSize {
     val IconButton = 40.dp
     val RowMin = 52.dp
     val Button = 52.dp
-    val Composer = 52.dp
+    val Composer = 56.dp
     val Icon = 22.dp
     /** 列表行左边的图标块,里面的图形是 [TileIcon]。 */
     val Tile = 30.dp
@@ -54,13 +54,13 @@ object MikaSize {
     const val IconStroke = 1.7f
 }
 
-/** 圆角。 */
+/** 圆角。Liquid Glass 版:整体放大,玻璃件的边角更圆、更同心。 */
 object MikaRadius {
-    val Card = 16.dp
-    val Bubble = 20.dp
-    val BubbleTail = 6.dp
-    val Button = 14.dp
-    val Tile = 9.dp
+    val Card = 24.dp
+    val Bubble = 26.dp
+    val BubbleTail = 12.dp
+    val Button = 20.dp
+    val Tile = 12.dp
 }
 
 /** 常用形状;顶层常量,重组时不新建。 */

@@ -32,6 +32,8 @@ import androidx.compose.ui.draw.drawWithContent
 import androidx.compose.ui.draw.shadow
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.BlurEffect
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.TileMode
 import androidx.compose.ui.graphics.drawscope.translate
@@ -49,19 +51,61 @@ import com.wangzan101.mika.ui.theme.MikaSize
 import com.wangzan101.mika.ui.theme.MikaTheme
 import com.wangzan101.mika.ui.theme.MikaType
 
-/** 页面底:干净的近白(深色下近黑),不加渐变。 */
+/**
+ * 页面底(Liquid Glass):近白(深色下近黑)的底上铺三团很淡的彩色光晕——左上蓝、右下绿、右侧橙。
+ * 半透的卡片与玻璃悬浮件压在上面时能透出这些颜色,才有玻璃折射的感觉;光晕只画一次,不随内容滚动。
+ */
 @Composable
 fun PageBackground(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {
-    Box(modifier.fillMaxSize().background(MikaTheme.colors.bg), content = content)
+    val c = MikaTheme.colors
+    Box(
+        modifier.fillMaxSize().background(c.bg).drawBehind {
+            val r = size.maxDimension * 0.8f
+            val a = if (c.isDark) 1.7f else 1f
+            drawCircle(
+                Brush.radialGradient(listOf(c.accent.copy(alpha = 0.13f * a), Color.Transparent), center = Offset(size.width * 0.05f, size.height * 0.02f), radius = r),
+                radius = r, center = Offset(size.width * 0.05f, size.height * 0.02f),
+            )
+            drawCircle(
+                Brush.radialGradient(listOf(c.series[2].copy(alpha = 0.09f * a), Color.Transparent), center = Offset(size.width * 1.02f, size.height * 0.98f), radius = r),
+                radius = r, center = Offset(size.width * 1.02f, size.height * 0.98f),
+            )
+            drawCircle(
+                Brush.radialGradient(listOf(c.series[1].copy(alpha = 0.06f * a), Color.Transparent), center = Offset(size.width * 1.05f, size.height * 0.38f), radius = r * 0.8f),
+                radius = r * 0.8f, center = Offset(size.width * 1.05f, size.height * 0.38f),
+            )
+        },
+        content = content,
+    )
 }
 
-/** 卡片的底:白底 + 黑 5% 描边 + 极淡阴影;深色下只有描边。 */
+/**
+ * 卡片的底(Liquid Glass):半透的面 + 纵向微光泽(上略亮、下略沉)+ 高光描边
+ *(上边是近白的折射亮线,往下渐隐到原来的描边色)+ 极淡阴影;深色下只有描边。
+ */
 fun Modifier.cardSurface(colors: MikaColors, shape: Shape = MikaShapes.Card): Modifier =
     (if (colors.cardShadow.alpha > 0f) {
         shadow(6.dp, shape, clip = false, ambientColor = colors.cardShadow.copy(alpha = 0.45f), spotColor = colors.cardShadow.copy(alpha = 0.16f))
     } else this)
-        .background(colors.surface, shape)
-        .border(0.5.dp, colors.edge, shape)
+        .background(
+            Brush.verticalGradient(
+                listOf(
+                    colors.surface.copy(alpha = (colors.surface.alpha + 0.07f).coerceAtMost(1f)),
+                    colors.surface.copy(alpha = (colors.surface.alpha - 0.05f).coerceAtLeast(0f)),
+                ),
+            ),
+            shape,
+        )
+        .border(
+            0.5.dp,
+            Brush.verticalGradient(
+                listOf(
+                    Color.White.copy(alpha = if (colors.isDark) 0.32f else 0.9f),
+                    colors.edge,
+                ),
+            ),
+            shape,
+        )
 
 /** 悬浮元素的阴影(输入栏、浮在内容上的按钮)。 */
 fun Modifier.floatShadow(colors: MikaColors, shape: Shape): Modifier =
@@ -140,10 +184,10 @@ fun Modifier.glassSource(backdrop: GlassBackdrop?): Modifier =
             drawLayer(backdrop.layer)
         }
 
-private val GlassBlur = BlurEffect(30f, 30f, TileMode.Clamp)
+private val GlassBlur = BlurEffect(44f, 44f, TileMode.Clamp)
 
 /**
- * 玻璃输入栏的外壳:半透明底 + 背景模糊 + 悬浮阴影,高至少 52。
+ * 玻璃输入栏的外壳:半透明底 + 背景模糊 + 悬浮阴影,高至少 56。
  * [backdrop] 为 null(不支持模糊、或后面没有内容)时用不透明底。
  */
 @Composable
@@ -170,8 +214,30 @@ fun GlassBar(
             )
         }
         Row(
-            Modifier.fillMaxWidth().background(if (backdrop != null) c.glass else c.surface)
-                .border(0.5.dp, c.glassEdge, shape)
+            Modifier.fillMaxWidth()
+                .then(
+                    if (backdrop != null) {
+                        // Liquid Glass:上半更透亮、往下渐沉的玻璃面
+                        Modifier.background(
+                            Brush.verticalGradient(
+                                listOf(
+                                    c.glass.copy(alpha = (c.glass.alpha + 0.12f).coerceAtMost(1f)),
+                                    c.glass.copy(alpha = (c.glass.alpha - 0.08f).coerceAtLeast(0f)),
+                                ),
+                            ),
+                        )
+                    } else Modifier.background(c.surface),
+                )
+                .border(
+                    0.5.dp,
+                    Brush.verticalGradient(
+                        listOf(
+                            Color.White.copy(alpha = if (c.isDark) 0.5f else 0.85f),
+                            c.glassEdge,
+                        ),
+                    ),
+                    shape,
+                )
                 .heightIn(min = MikaSize.Composer).padding(6.dp),
             verticalAlignment = Alignment.CenterVertically,
             horizontalArrangement = Arrangement.spacedBy(4.dp),

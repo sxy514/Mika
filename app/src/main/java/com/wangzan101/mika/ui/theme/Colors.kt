@@ -7,6 +7,8 @@ import androidx.compose.ui.graphics.Color
 /**
  * 界面用到的全部颜色。页面一律从 [MikaTheme.colors] 取,不写死色值。
  * 实色只用在强调(主按钮、选中、开关、用户消息)和状态(成功、需要你、出错);图标块一律中性。
+ * Liquid Glass 版:卡片与气泡改为半透,页面底铺淡彩光晕(见 PageBackground),让材质透出底色;
+ * 玻璃描边改为亮色高光,模拟玻璃边缘的折射亮线。
  */
 @Immutable
 class MikaColors(
@@ -64,7 +66,7 @@ class MikaColors(
 
 val LightColors = MikaColors(
     bg = Color(0xFFF7F7F8),
-    surface = Color(0xFFFFFFFF),
+    surface = Color(0xE6FFFFFF),
     fill = Color(0x0A000000),
     ink = Color(0xFF1C1C1E),
     ink2 = Color(0xFF5F6068),
@@ -82,10 +84,10 @@ val LightColors = MikaColors(
     bad = Color(0xFFE5483D),
     badSoft = Color(0x1AE5483D),
     neutralSoft = Color(0x0B000000),
-    answer = Color(0x09000000),
+    answer = Color(0x8CFFFFFF),
     greySoft = Color(0x1F767680),
-    glass = Color(0xB8FFFFFF),
-    glassEdge = Color(0x0F000000),
+    glass = Color(0x99FFFFFF),
+    glassEdge = Color(0x73FFFFFF),
     cardShadow = Color(0xFF000000),
     floatShadow = Color(0xFF000000),
     thumb = Color(0xFFFFFFFF),
@@ -97,7 +99,7 @@ val LightColors = MikaColors(
 
 val DarkColors = MikaColors(
     bg = Color(0xFF0E0E10),
-    surface = Color(0xFF1A1A1D),
+    surface = Color(0xE01A1A1D),
     fill = Color(0x0FFFFFFF),
     ink = Color(0xFFF2F2F4),
     ink2 = Color(0xFFA4A5AD),
@@ -115,10 +117,10 @@ val DarkColors = MikaColors(
     bad = Color(0xFFFF6961),
     badSoft = Color(0x24FF6961),
     neutralSoft = Color(0x12FFFFFF),
-    answer = Color(0x0DFFFFFF),
+    answer = Color(0x26FFFFFF),
     greySoft = Color(0x38767680),
-    glass = Color(0xB81A1A1D),
-    glassEdge = Color(0x14FFFFFF),
+    glass = Color(0xA61A1A1D),
+    glassEdge = Color(0x40FFFFFF),
     cardShadow = Color.Transparent,
     floatShadow = Color(0xFF000000),
     thumb = Color(0xFFFFFFFF),

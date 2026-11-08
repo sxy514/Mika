@@ -241,7 +241,7 @@ fun BarIconButton(
 
 /**
  * 顶栏:56 高,左右各一个图标按钮位,标题居中,可带一行副标题。
- * 底色默认是页面底色,内容在它下面滚动时不透字。
+ * 底色默认是玻璃色(Liquid Glass):半透,能隐约透出页面底的光晕。
  */
 @Composable
 fun TopBar(
@@ -254,7 +254,7 @@ fun TopBar(
     right: (@Composable RowScope.() -> Unit)? = null,
     subtitle: String? = null,
     subtitleColor: Color = Color.Unspecified,
-    background: Color = MikaTheme.colors.bg,
+    background: Color = MikaTheme.colors.glass,
 ) {
     val c = MikaTheme.colors
     Box(Modifier.fillMaxWidth().background(background).windowInsetsPadding(WindowInsets.statusBars)) {
