@@ -1,8 +1,15 @@
-# GitHub Actions workflow for Mika 0.1.39 (Liquid Glass + SenseVoice, fixed signing) — v3
-# v2: align the Android setup with upstream Mika's own CI app job
-# (setup-android@v4 with explicit android-36 packages). The v1 file's
-# setup-android@v3 step failed in the first Actions run (2026-11-08,
-# run 42455210045, failed at "Set up Android SDK" before compiling).
+# GitHub Actions workflow for Mika 0.1.39 (Liquid Glass + SenseVoice, fixed signing) — v4
+# v4: add a dedicated "Fetch Gradle distribution (retry)" step before the
+# build. On 2026-11-08 three consecutive runs (Build #5/#6/#7) all died in
+# under ~30 s because the wrapper's one-shot download of
+# gradle-8.11.1-bin.zip from services.gradle.org failed (read timeout,
+# then HTTP 504 from the GitHub mirror) — compilation never started.
+# `./gradlew --version` performs exactly that download and nothing else,
+# so retrying it up to 8 times absorbs the flaky network without masking
+# real compile errors (the build step itself still runs once).
+# v3/v2 history: v2 aligned the Android setup with upstream Mika's own CI
+# app job (setup-android@v4 with explicit android-36 packages) after the
+# v1 file's setup-android@v3 step failed in run 42455210045.
 # Place this file at: .github/workflows/build-apk.yml
 # Trigger it manually from the repo's Actions tab; no code changes needed.
 name: Build Liquid Glass APK
@@ -31,6 +38,21 @@ jobs:
 
       - name: Make gradlew executable
         run: chmod +x gradlew
+
+      - name: Fetch Gradle distribution (retry)
+        run: |
+          for i in 1 2 3 4 5 6 7 8; do
+            echo "Attempt $i: downloading Gradle distribution"
+            if ./gradlew --version; then
+              echo "Gradle distribution ready"
+              break
+            fi
+            if [ "$i" -eq 8 ]; then
+              echo "Gradle distribution download failed after 8 attempts"
+              exit 1
+            fi
+            sleep 20
+          done
 
       - name: Build debug APK
         run: ./gradlew :app:assembleDebug --no-daemon --stacktrace
