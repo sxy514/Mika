@@ -72,8 +72,9 @@ internal object SenseVoiceEngine {
                     provider = "cpu",
                 ),
             )
-            // assetManager 只在按资源相对路径加载时用;这里全是私有目录的绝对路径,传了也不读
-            return OfflineRecognizer(context.assets, config).also {
+            // 必须传 null:assetManager 非空时 sherpa 会走 newFromAsset、按 assets 相对路径找文件,
+            // 而这里是私有目录的绝对路径,走 assets 通道必然创建失败;传 null 才走 newFromFile 按文件路径加载
+            return OfflineRecognizer(null, config).also {
                 recognizer = it
                 recognizerKey = key
             }
@@ -156,7 +157,8 @@ class SenseVoiceSpeech(
                 SpeechEvent.Final(SenseVoiceEngine.decode(appContext, samples))
             } catch (e: CancellationException) {
                 throw e
-            } catch (e: Exception) {
+            } catch (e: Throwable) {
+                // 原生层加载/解码失败可能抛 Error(如链接、初始化错误),一并转成失败提示,不能让它掀翻整个 App
                 SpeechEvent.Failed(SpeechFailure.Provider(ModelError.BadResponse(e.message.orEmpty(), e)))
             }
             out.finish(result)
