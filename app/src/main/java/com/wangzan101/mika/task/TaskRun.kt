@@ -82,6 +82,7 @@ import com.wangzan101.mika.core.run.RunInput
 import com.wangzan101.mika.core.run.InputReceipt
 import com.wangzan101.mika.core.run.Delivery
 import com.wangzan101.mika.core.knowledge.KnowledgeStore
+import com.wangzan101.mika.knowledge.UserGuideFiles
 import com.wangzan101.mika.core.knowledge.AppKnowledgeDrafter
 import com.wangzan101.mika.core.knowledge.GuideCatalog
 import com.wangzan101.mika.core.record.RunSink
@@ -546,12 +547,15 @@ class TaskRun(
             }
             val vision = env.visionModelFactory(service, session)
 
+            // 用户自建的 App 说明(设置里维护):每个任务现读,刚改完下一轮就生效
+            val userGuideStore = UserGuideFiles(service.filesDir)
             val (knowledge, skills) = withContext(Dispatchers.IO) {
                 // 用户对某个 App/站点的补充放在私有目录 personal/apps、personal/sites 下
                 val userNotes = KnowledgeStore.loadNotes(File(service.filesDir, "personal"))
                 // 自学的 App 知识里改名前写下的工具名换成现在的
                 val learnedNotes = legacyNames().let { legacy -> memoryRuntime.appKnowledge().notes().mapValues { it.value.copy(text = legacy.rewrite(it.value.text)) } }
-                KnowledgeStore(KnowledgeStore.loadBundled(), userNotes, learnedNotes) to GuideCatalog.loadBundled()
+                val userEntries = userGuideStore.list().mapNotNull(com.wangzan101.mika.core.knowledge.UserAppGuideParse::toEntry)
+                KnowledgeStore(KnowledgeStore.loadBundled(), userNotes, learnedNotes, userEntries) to GuideCatalog.loadBundled()
             }
             val appAccess = (service.application as MikaApp).appAccess
             // 应用访问边界:工具和预览画面共用一份(下面接手机端口时建),窗口没变时核对结果直接沿用,预览不必每一帧都问窗口
@@ -718,7 +722,7 @@ class TaskRun(
             // 用户本次说的话:记忆的引文、按用户要求写下技能的引文都据此核对(只在内存里,任务开始清空)
             val utterances = UserUtterances()
             // 改名前沉淀的个人技能:里面的旧工具名载入时换成现在的
-            val catalog = GuideCatalog.withPersonal(skills, memoryRuntime.skills(), legacyNames()::rewrite)
+            val catalog = GuideCatalog.withUserGuides(GuideCatalog.withPersonal(skills, memoryRuntime.skills(), legacyNames()::rewrite), userGuideStore)
             // 内置浏览器:每个任务自己的后台网页显示、标签池和脚本引擎,第一次打开网址时才建(只用手机的任务不建);
             // 系统里没有 WebView 时不提供网页工具
             val webInstalled = runCatching { WebViewCompat.getCurrentWebViewPackage(service) != null }.getOrDefault(false)

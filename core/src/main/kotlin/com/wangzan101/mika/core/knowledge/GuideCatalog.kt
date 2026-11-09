@@ -53,15 +53,18 @@ class GuideCatalog private constructor(
     private val personal: PersonalSkills? = null,
     /** 个人技能正文载入时做的改写(改名前的工具名换成现在的);默认原样。 */
     private val rewrite: (String) -> String = { it },
+    /** 用户自建的 App 说明;同名时整份覆盖内置条目(与个人技能覆盖内置技能同一规矩)。 */
+    private val userGuides: UserAppGuides? = null,
 ) {
     private val bundledItems: List<GuideInfo> = rows.map(::info)
 
-    /** 个人技能每次现读:收下、停用随时发生。 */
+    /** 个人技能与用户说明每次现读:收下、停用、改完随时发生。 */
     val items: List<GuideInfo>
         get() {
             val mine = personalEntries().map { it.info }
-            val names = mine.map { it.name }.toSet()
-            return mine + bundledItems.filter { it.name !in names }
+            val user = userGuideEntries().map { it.info }
+            val names = (mine + user).map { it.name }.toSet()
+            return mine + user + bundledItems.filter { it.name !in names }
         }
 
     /**
@@ -126,6 +129,7 @@ class GuideCatalog private constructor(
         val main = info.files.first()
         val path = (file?.trim()?.takeIf { it.isNotEmpty() } ?: main).removePrefix("./")
         if (info.kind == PERSONAL_KIND) return viewPersonal(info, path)
+        if (info.kind == KnowledgeIndex.APP) userGuideEntries().find { it.info.name == info.name }?.let { return viewUser(it, path) }
         if (path !in info.files)
             return GuideView.Failed("file_not_found", "No file '$path' in ${info.kind}:${info.name}. Available: ${info.files.joinToString()}.")
         val text = (if (path == main) fullText(info) else read(info, path))
@@ -147,7 +151,32 @@ class GuideCatalog private constructor(
     /** 主文件(APP.md / SITE.md / SKILL.md)的正文,去掉头部。坏掉的个人技能为 null。 */
     fun fullText(info: GuideInfo): String? {
         if (info.kind == PERSONAL_KIND) return personalEntries().find { it.info.name == info.name }?.body
+        if (info.kind == KnowledgeIndex.APP) userGuideEntries().find { it.info.name == info.name }?.let { return it.body }
         return read(info, KnowledgeIndex.fileOf(info.kind))
+    }
+
+    /** 一份用户说明的可读形态:[body] 是 APP.md 正文(去头部),[files] 是附件全文。 */
+    private class UserGuideEntry(val info: GuideInfo, val body: String?, val files: Map<String, String>)
+
+    /** 用户说明每次现读现解析;头部不全的(见 [UserAppGuideParse.toEntry])不进目录。 */
+    private fun userGuideEntries(): List<UserGuideEntry> =
+        userGuides?.list().orEmpty().mapNotNull { g ->
+            val entry = UserAppGuideParse.toEntry(g) ?: return@mapNotNull null
+            UserGuideEntry(
+                GuideInfo(
+                    kind = KnowledgeIndex.APP, name = g.id, display = entry.display,
+                    description = entry.description, aliases = entry.aliases, terms = entry.packages,
+                    files = listOf("APP.md") + g.files.keys.sorted(),
+                ),
+                body = entry.body, files = g.files,
+            )
+        }
+
+    private fun viewUser(e: UserGuideEntry, path: String): GuideView {
+        val text = (if (path == "APP.md") e.body else e.files[path]?.let { FrontMatter.parse(it).second })
+            ?: return GuideView.Failed("file_not_found", "No file '$path' in app:${e.info.name}. Available: ${e.info.files.joinToString()}.")
+        val cut = text.length > VIEW_LIMIT
+        return GuideView.Found(e.info, path, if (cut) text.take(VIEW_LIMIT) + "\n…(truncated)" else text, cut, text.length)
     }
 
     private fun read(info: GuideInfo, file: String): String? =
@@ -244,7 +273,11 @@ class GuideCatalog private constructor(
 
         /** 内置目录 + 个人技能;[rewrite] 是个人技能正文载入时的改写(改名前的工具名换成现在的)。 */
         fun withPersonal(bundled: GuideCatalog, personal: PersonalSkills, rewrite: (String) -> String = { it }): GuideCatalog =
-            GuideCatalog(bundled.loader, bundled.rows, personal, rewrite)
+            GuideCatalog(bundled.loader, bundled.rows, personal, rewrite, bundled.userGuides)
+
+        /** 在已有目录上再合并用户自建的 App 说明(保留个人技能与改写设置)。 */
+        fun withUserGuides(catalog: GuideCatalog, userGuides: UserAppGuides): GuideCatalog =
+            GuideCatalog(catalog.loader, catalog.rows, catalog.personal, catalog.rewrite, userGuides)
 
         private fun info(e: IndexEntry) = GuideInfo(
             kind = e.kind, name = e.name, display = e.display, description = e.description,

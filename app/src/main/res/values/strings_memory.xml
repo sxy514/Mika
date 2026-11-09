@@ -88,4 +88,36 @@
     <string name="skills_imported">Imported</string>
     <string name="skill_builtin_name">A built-in skill already has this name. Rename it and try again.</string>
     <string name="skill_draft_pending">A draft with this name is already waiting for review. Handle that one first.</string>
+
+    <string name="guides_title">My app guides</string>
+    <string name="guides_empty">No guides yet. Create one for a game or app and Mika will follow it when it opens that app.</string>
+    <string name="guides_new">New guide</string>
+    <string name="guides_new_sub">Pick an installed app and get a fill-in template</string>
+    <string name="guides_pick_app">Pick an app</string>
+    <string name="guides_no_candidates">Every installed app already has a guide.</string>
+    <string name="guides_edit_main">Edit guide</string>
+    <string name="guides_files_btn">Files (%1$d)</string>
+    <string name="guides_files_title">Files of %1$s</string>
+    <string name="guides_no_files">No attachments yet. Add one per feature, for example one for upgrading gear.</string>
+    <string name="guides_files_hint">In the guide text, point to a file as references/name.md so Mika reads it when needed.</string>
+    <string name="guides_add_file">Add file</string>
+    <string name="guides_file_name">File name</string>
+    <string name="guides_file_name_hint">Lowercase English, digits and hyphens, for example upgrade-gear. It is saved as references/upgrade-gear.md.</string>
+    <string name="guides_create">Create</string>
+    <string name="guides_save">Save</string>
+    <string name="guides_close">Close</string>
+    <string name="guides_delete">Delete</string>
+    <string name="guides_delete_confirm">Tap again to delete</string>
+    <string name="guides_invalid">Header incomplete: this guide is not in use yet</string>
+    <string name="guides_bad_format">The guide could not be saved. Check the header at the top.</string>
+    <string name="guides_name_missing">The header is missing a name line.</string>
+    <string name="guides_name_mismatch">The name in the header does not match this guide; renaming is not supported.</string>
+    <string name="guides_display_missing">The header is missing a display line.</string>
+    <string name="guides_packages_empty">The header must list at least one package name.</string>
+    <string name="guides_description_missing">The header is missing a description line.</string>
+    <string name="guides_body_empty">The guide text is empty.</string>
+    <string name="guides_file_bad_name">Use lowercase English, digits and hyphens for the file name.</string>
+    <string name="guides_file_exists">A file with this name already exists.</string>
+    <string name="guides_ref_missing">The text points to a file that does not exist. Add the file first, or fix the reference.</string>
+    <string name="guides_file_starter"># %1$s\n\n(Write this feature here: its entry, a button table, the steps, branches, how to tell it worked, and when to stop and hand over.)</string>
 </resources>

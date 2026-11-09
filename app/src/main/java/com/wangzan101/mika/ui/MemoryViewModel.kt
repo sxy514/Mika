@@ -17,6 +17,9 @@ import com.wangzan101.mika.core.skills.PersonalSkill
 import com.wangzan101.mika.core.skills.PersonalSkills
 import com.wangzan101.mika.core.skills.SkillStatus
 import com.wangzan101.mika.core.knowledge.AppKnowledgeDraftStore
+import com.wangzan101.mika.core.knowledge.UserAppGuide
+import com.wangzan101.mika.core.knowledge.UserAppGuideParse
+import com.wangzan101.mika.core.knowledge.UserAppGuides
 import com.wangzan101.mika.core.knowledge.AppKnowledgeDrafter
 import com.wangzan101.mika.core.knowledge.AppKnowledgeStage
 import com.wangzan101.mika.core.knowledge.AppKnowledgeTrial
@@ -84,6 +87,10 @@ class MemoryViewModel(
     /** 收下改过的技能时:提到跑脚本的工具的,脚本得是清单里标为可运行的。 */
     private val runnableScripts: Set<String> = emptySet(),
     private val appDrafts: AppKnowledgeDraftStore? = null,
+    /** 用户自建的 App 说明(设置里新建、编辑);没有时这一段不出现。 */
+    private val userGuides: UserAppGuides? = null,
+    /** 已装 App(新建说明时选游戏用):包名与显示名,由界面层从包管理器取。 */
+    private val appsProvider: () -> List<InstalledApp> = { emptyList() },
     /** 内置技能的名字:导入的技能不能用。 */
     private val builtinSkillNames: Set<String> = emptySet(),
     /** 示范草稿收下、拒绝或删除后清掉本机轨迹。 */
@@ -149,7 +156,67 @@ class MemoryViewModel(
     private fun row(m: MemoryItem) = Row(m.id, m.kind, m.content, m.keywords, sourceLine(m.source), m.pinned, m.status == MemoryStatus.pending, m.replaces)
 
     // ---- 技能分段 ----
-    private fun skillsUi(): SkillsUi = skills?.let { SkillsUi.of(it, appDrafts) } ?: SkillsUi()
+    private fun skillsUi(): SkillsUi = (skills?.let { SkillsUi.of(it, appDrafts) } ?: SkillsUi()).copy(guides = guideRows())
+
+    // ---- 用户自建 App 说明 ----
+    private fun guideRows(): List<GuideRow> = userGuides?.list().orEmpty().map { g ->
+        val entry = UserAppGuideParse.toEntry(g)
+        GuideRow(g.id, entry?.display ?: g.id, entry?.packages?.firstOrNull().orEmpty(),
+            entry?.description.orEmpty(), g.markdown, g.files, entry != null)
+    }
+
+    /** 新建说明时能选的已装 App:已经有说明的包名不再列出。 */
+    fun guideCandidates(): List<InstalledApp> {
+        val taken = guideRows().map { it.packageName }.toSet()
+        return appsProvider().filter { it.packageName !in taken }
+    }
+
+    fun createGuide(packageName: String, label: String) {
+        userGuides?.create(packageName, label)
+        skillsChanged()
+    }
+
+    fun saveGuideMain(id: String, markdown: String) = saveGuide(id) { it.copy(markdown = markdown) }
+
+    fun saveGuideFile(id: String, path: String, text: String) = saveGuide(id) { g -> g.copy(files = g.files + (path to text)) }
+
+    fun deleteGuideFile(id: String, path: String) = saveGuide(id) { g -> g.copy(files = g.files - path) }
+
+    fun deleteGuide(id: String) {
+        userGuides?.remove(id)
+        skillsChanged()
+    }
+
+    /**
+     * 新建一个附件:名字清洗成 references/ 下的英文 slug(与内置附件同一规矩),返回 null 表示建好了,
+     * 否则是给用户看的原因(新建框还开着,输入不丢)。
+     */
+    fun addGuideFile(id: String, rawName: String): String? {
+        val store = userGuides ?: return tr(R.string.guides_bad_format)
+        val cur = store.get(id) ?: return tr(R.string.guides_bad_format)
+        val slug = rawName.trim().removePrefix("references/").removeSuffix(".md").lowercase()
+            .replace(Regex("[^a-z0-9_-]+"), "-").trim('-')
+        if (slug.isEmpty()) return tr(R.string.guides_file_bad_name)
+        val path = "references/$slug.md"
+        if (path in cur.files) return tr(R.string.guides_file_exists)
+        store.put(cur.copy(files = cur.files + (path to tr(R.string.guides_file_starter, slug))))
+        skillsChanged()
+        return null
+    }
+
+    /** 改一份说明(正文或附件):先整份校验,不过就只提示、不落盘。 */
+    private fun saveGuide(id: String, change: (UserAppGuide) -> UserAppGuide) {
+        val store = userGuides ?: return
+        val cur = store.get(id) ?: return
+        val next = change(cur)
+        val problem = UserAppGuideParse.validate(next)
+        if (problem != null) {
+            local.update { it.copy(message = GUIDE_PROBLEMS[problem] ?: tr(R.string.guides_bad_format)) }
+            return
+        }
+        store.put(next)
+        skillsChanged()
+    }
     private fun skillsChanged() = skillsVersion.update { it + 1 }
 
     /**
@@ -225,6 +292,18 @@ class MemoryViewModel(
     }
 
     companion object {
+        private val GUIDE_PROBLEMS get() = mapOf(
+            "bad_id" to tr(R.string.guides_bad_format),
+            "name_missing" to tr(R.string.guides_name_missing),
+            "name_mismatch" to tr(R.string.guides_name_mismatch),
+            "display_missing" to tr(R.string.guides_display_missing),
+            "packages_empty" to tr(R.string.guides_packages_empty),
+            "description_missing" to tr(R.string.guides_description_missing),
+            "body_empty" to tr(R.string.guides_body_empty),
+            "file_bad_name" to tr(R.string.guides_file_bad_name),
+            "ref_missing" to tr(R.string.guides_ref_missing),
+        )
+
         private val SKILL_PROBLEMS get() = mapOf(
             "sensitive" to tr(R.string.memory_sensitive),
             "invalid_name" to tr(R.string.skill_invalid_name),
@@ -253,10 +332,17 @@ class MemoryViewModel(
 data class AppKnowledgeRow(val id: String, val name: String, val markdown: String, val stage: AppKnowledgeStage,
     val revision: Boolean = false, val changedLines: List<String> = emptyList(), val replaced: Boolean = false)
 
+/** 一份用户自建的 App 说明;[valid] 为假是头部不全,这份暂时不会被用上(列表里会标出来)。 */
+data class GuideRow(val id: String, val display: String, val packageName: String, val description: String,
+    val markdown: String, val files: Map<String, String>, val valid: Boolean)
+
+/** 一个已装 App(新建说明时选它):包名与界面上显示的名字。 */
+data class InstalledApp(val packageName: String, val label: String)
+
 /** 技能分段的内容:待收下的草稿和已收下的个人技能(在用的在前)。 */
 
 data class SkillsUi(val drafts: List<SkillRow> = emptyList(), val installed: List<SkillRow> = emptyList(),
-    val appKnowledge: List<AppKnowledgeRow> = emptyList()) {
+    val appKnowledge: List<AppKnowledgeRow> = emptyList(), val guides: List<GuideRow> = emptyList()) {
     companion object {
         fun of(skills: PersonalSkills, appDrafts: AppKnowledgeDraftStore? = null): SkillsUi {
             val installed = skills.list()

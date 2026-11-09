@@ -88,4 +88,36 @@
     <string name="skills_imported">匯入的</string>
     <string name="skill_builtin_name">和內建技能重名了，改個名字再試。</string>
     <string name="skill_draft_pending">已經有一份同名草稿在等你確認，先處理那份。</string>
+
+    <string name="guides_title">我寫的 App 說明</string>
+    <string name="guides_empty">還沒有說明。給某個遊戲或 App 建一份,Mika 打開它時就會照著做。</string>
+    <string name="guides_new">新建說明</string>
+    <string name="guides_new_sub">選一個已裝的 App,產生一份填空範本</string>
+    <string name="guides_pick_app">選擇一個 App</string>
+    <string name="guides_no_candidates">已裝的 App 都已經有說明了。</string>
+    <string name="guides_edit_main">編輯正文</string>
+    <string name="guides_files_btn">附件(%1$d)</string>
+    <string name="guides_files_title">%1$s 的附件</string>
+    <string name="guides_no_files">還沒有附件。一個功能建一個附件,比如升級裝備單獨一份。</string>
+    <string name="guides_files_hint">在正文裡寫 references/檔名.md 指向附件,Mika 需要時自己會讀。</string>
+    <string name="guides_add_file">新建附件</string>
+    <string name="guides_file_name">檔名</string>
+    <string name="guides_file_name_hint">用英文小寫、數字和連字號,比如 upgrade-gear,會存成 references/upgrade-gear.md。</string>
+    <string name="guides_create">新建</string>
+    <string name="guides_save">儲存</string>
+    <string name="guides_close">關閉</string>
+    <string name="guides_delete">刪除</string>
+    <string name="guides_delete_confirm">再點一次確認刪除</string>
+    <string name="guides_invalid">頭部不全:這份說明暫時還沒生效</string>
+    <string name="guides_bad_format">沒存上,檢查一下頂部的頭部格式。</string>
+    <string name="guides_name_missing">頭部缺了 name 這一行。</string>
+    <string name="guides_name_mismatch">頭部的 name 和這份說明對不上,不能改名。</string>
+    <string name="guides_display_missing">頭部缺了 display 這一行。</string>
+    <string name="guides_packages_empty">頭部的 packages 至少要有一個套件名。</string>
+    <string name="guides_description_missing">頭部缺了 description 這一行。</string>
+    <string name="guides_body_empty">正文是空的。</string>
+    <string name="guides_file_bad_name">檔名用英文小寫、數字和連字號。</string>
+    <string name="guides_file_exists">已經有同名附件了。</string>
+    <string name="guides_ref_missing">正文裡指向了一個不存在的附件。先建附件,或者把引用改對。</string>
+    <string name="guides_file_starter"># %1$s\n\n(在這一頁裡寫這個功能:入口、按鈕表、操作路線、分支與異常、怎樣算辦成、什麼時候停下交給使用者。)</string>
 </resources>

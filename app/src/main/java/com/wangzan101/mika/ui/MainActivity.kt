@@ -528,6 +528,15 @@ private fun MikaRoot(
                         appDrafts = memoryRuntime.appKnowledge(),
                         builtinSkillNames = bundled.items.map { it.name }.toSet(),
                         onSkillRetired = { app.teach.forget(it) },
+                        userGuides = com.wangzan101.mika.knowledge.UserGuideFiles(context.filesDir),
+                        appsProvider = {
+                            runCatching {
+                                val intent = Intent(Intent.ACTION_MAIN).addCategory(Intent.CATEGORY_LAUNCHER)
+                                context.packageManager.queryIntentActivities(intent, 0)
+                                    .map { InstalledApp(it.activityInfo.packageName, it.loadLabel(context.packageManager).toString()) }
+                                    .distinctBy { it.packageName }.sortedBy { it.label }
+                            }.getOrDefault(emptyList())
+                        },
                     )
                 }
             }

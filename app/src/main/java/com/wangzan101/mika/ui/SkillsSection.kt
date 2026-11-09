@@ -109,6 +109,7 @@ internal fun SkillsSection(vm: MemoryViewModel, ui: SkillsUi, pending: Boolean) 
                 inUse.forEachIndexed { i, row -> AppKnowledgeItem(vm, row, i == 0, viewing == row.id) { toggle(row.id) } }
             }
         }
+        GuidesSection(vm, ui.guides)
     }
 
     acting?.let { s ->

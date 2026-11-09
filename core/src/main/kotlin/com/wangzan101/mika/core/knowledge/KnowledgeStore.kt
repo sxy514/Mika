@@ -24,8 +24,11 @@ private val APP_KINDS = listOf(
  * 匹配是确定性的字符串匹配,不调用模型。
  */
 class KnowledgeStore(private val bundled: List<KnowledgeEntry>, notes: Map<String, String> = emptyMap(),
-    learnedNotes: Map<String, LearnedNote> = emptyMap()) {
-    private val entries: List<KnowledgeEntry> = bundled.map { e ->
+    learnedNotes: Map<String, LearnedNote> = emptyMap(), userEntries: List<KnowledgeEntry> = emptyList()) {
+    /** 用户自建说明同名时整份顶替内置条目,其余追加;补充笔记再按条目名贴到合并后的条目上。 */
+    private val merged: List<KnowledgeEntry> =
+        bundled.filter { b -> userEntries.none { it.name == b.name } } + userEntries
+    private val entries: List<KnowledgeEntry> = merged.map { e ->
         val personal = notes[e.name]
         val learned = learnedNotes[e.name]
         if (personal == null && learned == null) return@map e
